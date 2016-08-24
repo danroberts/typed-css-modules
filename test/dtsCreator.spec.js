@@ -3,6 +3,7 @@
 var path = require('path');
 var assert = require('assert');
 var DtsCreator = require('../lib/dtsCreator').DtsCreator;
+var DtsContent = require('../lib/dtsCreator').DtsContent;
 
 describe('DtsCreator', () => {
   var creator = new DtsCreator();
@@ -11,7 +12,7 @@ describe('DtsCreator', () => {
     it('returns DtsContent instance simple css', done => {
       creator.create('test/testStyle.css').then(content => {
         assert.equal(content.contents.length, 1);
-        assert.equal(content.contents[0], "export const myClass: string;")
+        assert.equal(content.contents[0], "  'myClass': string;")
         done();
       });
     });
@@ -26,21 +27,21 @@ describe('DtsCreator', () => {
     it('returns DtsContent instance from composing css', done => {
       creator.create('test/composer.css').then(content => {
         assert.equal(content.contents.length, 1);
-        assert.equal(content.contents[0], "export const root: string;")
+        assert.equal(content.contents[0], "  'root': string;")
         done();
       });
     })
     it('returns DtsContent instance from composing css whose has invalid import/composes', done => {
       creator.create('test/invalidComposer.scss').then(content => {
         assert.equal(content.contents.length, 1);
-        assert.equal(content.contents[0], "export const myClass: string;")
+        assert.equal(content.contents[0], "  'myClass': string;")
         done();
       });
     });
     it('returns DtsCOntent instance from the pair of path and contents', done => {
       creator.create('test/somePath', `.myClass { color: red }`).then(content => {
         assert.equal(content.contents.length, 1);
-        assert.equal(content.contents[0], "export const myClass: string;")
+        assert.equal(content.contents[0], "  'myClass': string;")
         done();
       });
     });
@@ -78,9 +79,32 @@ describe('DtsContent', () => {
   });
 
   describe('#formatted', () => {
-    it('returns formatted .d.ts string', done => {
+    it('returns a formatted interface declaration', done => {
       new DtsCreator().create('test/testStyle.css').then(content => {
-        assert.equal(content.formatted, "export const myClass: string;");
+        var interfaceString = content.formatted
+
+        assert(interfaceString.includes("export interface ITestStyleCss {"));
+        assert(interfaceString.includes("  'myClass': string;") );
+        assert(interfaceString.includes("}") );
+        assert(interfaceString.includes("declare const styles: ITestStyleCss;") );
+        assert(interfaceString.includes("export default styles;") );
+
+        done();
+      });
+    });
+
+    describe('cssExportForKey', () => {
+      it('returns a const export', ()  => {
+        new DtsCreator().create('test/testStyle.css').then(content => {
+          assert.equal(content.cssExportForKey('myClass'), "  'myClass': string;");
+          done();
+        });
+      })
+    })
+
+    it('returns an interface name from the file path', done => {
+      new DtsCreator().create('test/testStyle.css').then(content => {
+        assert.equal(content.interfaceName, "ITestStyleCss");
         done();
       });
     });

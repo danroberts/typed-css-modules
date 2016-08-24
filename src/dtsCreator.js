@@ -20,7 +20,7 @@ class DtsContent {
     outDir,
     rInputPath,
     rawTokenList,
-    resultList,
+    validTokenList,
     messageList
   }) {
     this.rootDir = rootDir;
@@ -28,17 +28,53 @@ class DtsContent {
     this.outDir = outDir;
     this.rInputPath = rInputPath;
     this.rawTokenList = rawTokenList;
-    this.resultList = resultList;
+    this.validTokenList = validTokenList;
     this.messageList = messageList;
   }
 
   get contents() {
-    return this.resultList;
+    return this.styleRules;
   }
 
   get formatted() {
-    if(!this.resultList || !this.resultList.length) return 'export default {};';
-    return this.resultList.join(os.EOL);
+    if(!this.validTokenList || !this.validTokenList.length) return 'export default {};';
+
+    return this.interfaceContent;
+  }
+
+  get interfaceName() {
+    var interfaceName = path.basename(this.rInputPath)
+      .replace(/^(\w)/, (_, c) => 'I' + c.toUpperCase())
+      .replace(/\.(\w)/, (_, c) => c.toUpperCase());
+
+    return interfaceName;
+  }
+
+  get styleRules() {
+    return this.validTokenList.map(this.cssExportForKey);
+  }
+
+  cssExportForKey(key) {
+    var indent = '  ';
+    return indent + "'" + key + "'" + ": string;"
+  }
+
+  get interfaceProperties() {
+    return this.styleRules
+  }
+
+  get interfaceContent() {
+
+    var interfaceContent = (
+`export interface ${this.interfaceName} {
+${this.interfaceProperties}
+}
+declare const styles: ${this.interfaceName};
+
+export default styles;`);
+
+    return interfaceContent;
+
   }
 
   get tokens() {
@@ -108,15 +144,13 @@ export class DtsCreator {
             }
           });
 
-          var result = validKeys.map(k => ('export const ' + k + ': string;'));
-
           var content = new DtsContent({
             rootDir: this.rootDir,
             searchDir: this.searchDir,
             outDir: this.outDir,
             rInputPath,
             rawTokenList: keys,
-            resultList: result,
+            validTokenList: validKeys,
             messageList
           });
 
